@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЕГЭ Русский язык - Mini App</title>
+    <link href="asset/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="asset/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="asset/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            font-family: 'Inter', 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .smooth-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass-effect { 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .soft-shadow { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+        .hover-scale:hover { transform: scale(1.02); }
+        .slide-up { transform: translateY(100%); transition: transform 0.3s ease-in-out; }
+        .slide-up.show { transform: translateY(0); }
+        .fade-in { opacity: 0; animation: fadeIn 0.5s ease-in-out forwards; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        .btn-soft {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 16px;
+            padding: 12px 24px;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-soft:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4); }
+        .menu-icon { font-size: 18px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .role-card { 
+            border-radius: 20px; 
+            padding: 24px; 
+            margin: 12px 0; 
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .role-card:hover { border-color: #667eea; transform: translateY(-4px); }
+        .role-card.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
+        .floating-btn {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .floating-btn:hover { transform: scale(1.1); }
+        .schedule-slot {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .schedule-slot:hover { border-color: #667eea; }
+        .schedule-slot.selected { background: rgba(102, 126, 234, 0.1); border-color: #667eea; }
+        .schedule-slot.booked { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-20">
+    <!-- Header -->
+    <header class="glass-effect fixed top-0 w-full z-50 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button id="menuBtn" class="p-2 rounded-full hover:bg-gray-100 smooth-transition">
+                <i class="fas fa-ellipsis-h text-gray-600 menu-icon"></i>
+            </button>
+            <div class="flex-1 text-center">
+                <h1 class="text-lg font-semibold text-gray-800" id="pageTitle">ЕГЭ Русский язык</h1>
+            </div>
+            <div id="userInfo" class="flex items-center">
+                <span class="text-sm text-gray-600 mr-2" id="userName">Пользователь</span>
+                <div class="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-xs"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar Menu -->
+    <div id="sideMenu" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="fixed left-0 top-0 h-full w-80 glass-effect slide-up">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-semibold text-gray-800">Меню</h2>
+                    <button id="closeSideMenu" class="p-2 rounded-full hover:bg-gray-100">
+                        <i class="fas fa-times text-gray-600"></i>
+                    </button>
+                </div>
+                <nav class="space-y-4">
+                    <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="profile">
+                        <i class="fas fa-user text-purple-500"></i>
+                        <span class="font-medium">Профиль</span>
+                    </a>
+                    <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="settings">
+                        <i class="fas fa-cog text-purple-500"></i>
+                        <span class="font-medium">Настройки</span>
+                    </a>
+                    <div id="tutorMenu" class="hidden">
+                        <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="taskConstructor">
+                            <i class="fas fa-plus-circle text-purple-500"></i>
+                            <span class="font-medium">Создать задание</span>
+                        </a>
+                        <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="scheduleManagement">
+                            <i class="fas fa-calendar-alt text-purple-500"></i>
+                            <span class="font-medium">Управление расписанием</span>
+                        </a>
+                        <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="students">
+                            <i class="fas fa-users text-purple-500"></i>
+                            <span class="font-medium">Мои ученики</span>
+                        </a>
+                    </div>
+                    <div id="studentMenu" class="hidden">
+                        <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="booking">
+                            <i class="fas fa-calendar-check text-purple-500"></i>
+                            <span class="font-medium">Записаться на занятие</span>
+                        </a>
+                        <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="progress">
+                            <i class="fas fa-chart-line text-purple-500"></i>
+                            <span class="font-medium">Мой прогресс</span>
+                        </a>
+                    </div>
+                    <a href="https://gensparkpublicblob.blob.core.windows.net/#" class="menu-link flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 smooth-transition" data-page="help">
+                        <i class="fas fa-question-circle text-purple-500"></i>
+                        <span class="font-medium">Помощь</span>
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-20 px-4">
+        <!-- Registration Page -->
+        <div id="registrationPage" class="page active fade-in">
+            <div class="max-w-md mx-auto mt-8">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-white text-2xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-2">Добро пожаловать!</h2>
+                    <p class="text-gray-600">Выберите свою роль для продолжения</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="role-card glass-effect hover-scale" data-role="student">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user-graduate text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-800">Ученик</h3>
+                                <p class="text-sm text-gray-600">Изучай русский язык, решай задания, записывайся к репетиторам</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="role-card glass-effect hover-scale" data-role="tutor">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
+                                <i class="fas fa-chalkboard-teacher text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-800">Репетитор</h3>
+                                <p class="text-sm text-gray-600">Создавай задания, управляй расписанием, обучай учеников</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="confirmRole" class="w-full btn-soft mt-8 text-center opacity-50 cursor-not-allowed" disabled>
+                    Продолжить
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="page">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Главная</h2>
+                
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white rounded-xl p-4 soft-shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Решено заданий</p>
+                                <p class="text-2xl font-bold text-gray-800" id="solvedTasks">0</p>
+                            </div>
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-check text-green-500"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-4 soft-shadow">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Точность</p>
+                                <p class="text-2xl font-bold text-gray-800" id="accuracy">0%</p>
+                            </div>
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-bullseye text-blue-500"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="bg-white rounded-xl p-4 soft-shadow hover-scale smooth-transition cursor-pointer" onclick="showPage('tasks', 'Орфография')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-red-400 to-pink-400 rounded-full flex items-center justify-center">
+                                <i class="fas fa-spell-check text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-800">Орфография</h3>
+                                <p class="text-sm text-gray-600">Задания 9-15</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 soft-shadow hover-scale smooth-transition cursor-pointer" onclick="showPage('tasks', 'Пунктуация')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full flex items-center justify-center">
+                                <i class="fas fa-quote-left text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-800">Пунктуация</h3>
+                                <p class="text-sm text-gray-600">Задания 16-21</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 soft-shadow hover-scale smooth-transition cursor-pointer" onclick="showPage('tasks', 'Языковые нормы')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center">
+                                <i class="fas fa-language text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-800">Языковые нормы</h3>
+                                <p class="text-sm text-gray-600">Задания 4-8</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 soft-shadow hover-scale smooth-transition cursor-pointer" onclick="showPage('tasks', 'Работа с текстом')">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-r from-purple-400 to-violet-400 rounded-full flex items-center justify-center">
+                                <i class="fas fa-file-alt text-white"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-800">Работа с текстом</h3>
+                                <p class="text-sm text-gray-600">Задания 22-27</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Page -->
+        <div id="tasksPage" class="page">
+            <div class="mb-6">
+                <button onclick="showPage('dashboardPage', 'ЕГЭ Русский язык')" class="text-purple-500 mb-4">
+                    <i class="fas fa-arrow-left mr-2"></i>Назад
+                </button>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4" id="categoryTitle">Задания</h2>
+                
+                <div id="tasksList" class="space-y-4">
+                    <!-- Tasks will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Constructor (Tutor Only) -->
+        <div id="taskConstructorPage" class="page">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Конструктор заданий</h2>
+                
+                <form id="taskForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                        <select id="taskCategory" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="orthography">Орфография</option>
+                            <option value="punctuation">Пунктуация</option>
+                            <option value="norms">Языковые нормы</option>
+                            <option value="text">Работа с текстом</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Номер задания ЕГЭ</label>
+                        <input type="number" id="taskNumber" min="1" max="27" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Текст задания</label>
+                        <textarea id="taskText" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Введите текст задания..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Варианты ответов</label>
+                        <div id="answerOptions" class="space-y-2">
+                            <input type="text" class="answer-option w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Вариант 1">
+                            <input type="text" class="answer-option w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Вариант 2">
+                            <input type="text" class="answer-option w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Вариант 3">
+                            <input type="text" class="answer-option w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Вариант 4">
+                        </div>
+                        <button type="button" id="addOption" class="mt-2 text-purple-500 text-sm">+ Добавить вариант</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Правильный ответ</label>
+                        <input type="number" id="correctAnswer" min="1" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Номер правильного ответа">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Объяснение</label>
+                        <textarea id="taskExplanation" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Объяснение правильного ответа..."></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full btn-soft">
+                        <i class="fas fa-save mr-2"></i>Создать задание
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Booking Page (Student Only) -->
+        <div id="bookingPage" class="page">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Запись на занятие</h2>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Выберите репетитора</label>
+                    <select id="tutorSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="">Выберите репетитора...</option>
+                    </select>
+                </div>
+
+                <div id="availableSlots" class="space-y-4">
+                    <!-- Available slots will be loaded here -->
+                </div>
+
+                <button id="bookSlot" class="w-full btn-soft mt-6 opacity-50 cursor-not-allowed" disabled>
+                    <i class="fas fa-calendar-check mr-2"></i>Записаться
+                </button>
+            </div>
+        </div>
+
+        <!-- Schedule Management (Tutor Only) -->
+        <div id="scheduleManagementPage" class="page">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Управление расписанием</h2>
+                
+                <div class="mb-6">
+                    <button id="addTimeSlot" class="btn-soft">
+                        <i class="fas fa-plus mr-2"></i>Добавить время
+                    </button>
+                </div>
+
+                <div id="timeSlots" class="space-y-4">
+                    <!-- Time slots will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Page -->
+        <div id="progressPage" class="page">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Мой прогресс</h2>
+                
+                <div class="bg-white rounded-xl p-6 soft-shadow mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Общая статистика</h3>
+                    <canvas id="progressChart" style="height: 300px;"></canvas>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white rounded-xl p-4 soft-shadow">
+                        <h4 class="font-semibold text-gray-800 mb-2">Орфография</h4>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-red-400 to-pink-400 h-2 rounded-full" style="width: 75%"></div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">75% завершено</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-4 soft-shadow">
+                        <h4 class="font-semibold text-gray-800 mb-2">Пунктуация</h4>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-blue-400 to-cyan-400 h-2 rounded-full" style="width: 60%"></div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">60% завершено</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 w-full glass-effect border-t border-gray-200">
+        <div class="flex justify-around py-3">
+            <button class="nav-btn flex flex-col items-center space-y-1 p-2 rounded-lg smooth-transition" data-page="dashboardPage" data-title="ЕГЭ Русский язык">
+                <i class="fas fa-home menu-icon text-purple-500"></i>
+                <span class="text-xs font-medium text-purple-500">Главная</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center space-y-1 p-2 rounded-lg smooth-transition" data-page="tasksPage" data-title="Задания">
+                <i class="fas fa-tasks menu-icon text-gray-500"></i>
+                <span class="text-xs font-medium text-gray-500">Задания</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center space-y-1 p-2 rounded-lg smooth-transition" data-page="progressPage" data-title="Прогресс">
+                <i class="fas fa-chart-line menu-icon text-gray-500"></i>
+                <span class="text-xs font-medium text-gray-500">Прогресс</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center space-y-1 p-2 rounded-lg smooth-transition" data-page="profilePage" data-title="Профиль">
+                <i class="fas fa-user menu-icon text-gray-500"></i>
+                <span class="text-xs font-medium text-gray-500">Профиль</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Floating Action Button -->
+    <div class="floating-btn" id="floatingBtn">
+        <i class="fas fa-plus"></i>
+    </div>
+
+    <!-- Scripts -->
+    <script src="asset/npm/chart.js"></script>
+    <script>
+        // Initialize Telegram WebApp
+        let tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
+        // Global variables
+        let currentUser = null;
+        let currentRole = null;
+        let db = null;
+
+        // IndexedDB initialization
+        const initDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('EGEApp', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    if (!db.objectStoreNames.contains('users')) {
+                        const userStore = db.createObjectStore('users', { keyPath: 'id' });
+                        userStore.createIndex('telegramId', 'telegramId', { unique: true });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('tasks')) {
+                        const taskStore = db.createObjectStore('tasks', { keyPath: 'id', autoIncrement: true });
+                        taskStore.createIndex('category', 'category', { unique: false });
+                        taskStore.createIndex('createdBy', 'createdBy', { unique: false });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('schedule')) {
+                        const scheduleStore = db.createObjectStore('schedule', { keyPath: 'id', autoIncrement: true });
+                        scheduleStore.createIndex('tutorId', 'tutorId', { unique: false });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('progress')) {
+                        const progressStore = db.createObjectStore('progress', { keyPath: 'id', autoIncrement: true });
+                        progressStore.createIndex('userId', 'userId', { unique: false });
+                    }
+                };
+            });
+        };
+
+        // User management
+        const saveUser = (user) => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['users'], 'readwrite');
+                const store = transaction.objectStore('users');
+                const request = store.put(user);
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        const getUser = (telegramId) => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['users'], 'readonly');
+                const store = transaction.objectStore('users');
+                const index = store.index('telegramId');
+                const request = index.get(telegramId);
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        // Navigation
+        const showPage = (pageId, title = '') => {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            document.getElementById(pageId).classList.add('active');
+            
+            if (title) {
+                document.getElementById('pageTitle').textContent = title;
+            }
+
+            // Update navigation
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.querySelector('i').className = btn.querySelector('i').className.replace('text-purple-500', 'text-gray-500');
+                btn.querySelector('span').className = btn.querySelector('span').className.replace('text-purple-500', 'text-gray-500');
+            });
+
+            const activeBtn = document.querySelector(`[data-page="${pageId}"]`);
+            if (activeBtn) {
+                activeBtn.querySelector('i').className = activeBtn.querySelector('i').className.replace('text-gray-500', 'text-purple-500');
+                activeBtn.querySelector('span').className = activeBtn.querySelector('span').className.replace('text-gray-500', 'text-purple-500');
+            }
+
+            // Load page-specific content
+            if (pageId === 'progressPage') {
+                loadProgressChart();
+            } else if (pageId === 'tasksPage') {
+                loadTasks(title);
+            } else if (pageId === 'bookingPage') {
+                loadTutors();
+            } else if (pageId === 'scheduleManagementPage') {
+                loadTimeSlots();
+            }
+        };
+
+        // Role selection
+        document.querySelectorAll('.role-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                currentRole = card.getAttribute('data-role');
+                
+                const confirmBtn = document.getElementById('confirmRole');
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                confirmBtn.removeAttribute('disabled');
+            });
+        });
+
+        document.getElementById('confirmRole').addEventListener('click', async () => {
+            if (currentRole) {
+                const telegramId = tg?.initDataUnsafe?.user?.id || Math.random().toString(36).substr(2, 9);
+                const username = tg?.initDataUnsafe?.user?.username || 'user';
+                
+                const user = {
+                    id: Date.now(),
+                    telegramId: telegramId,
+                    username: username,
+                    role: currentRole,
+                    createdAt: new Date().toISOString()
+                };
+                
+                await saveUser(user);
+                currentUser = user;
+                
+                // Update UI based on role
+                if (currentRole === 'tutor') {
+                    document.getElementById('tutorMenu').classList.remove('hidden');
+                    document.getElementById('studentMenu').classList.add('hidden');
+                } else {
+                    document.getElementById('studentMenu').classList.remove('hidden');
+                    document.getElementById('tutorMenu').classList.add('hidden');
+                }
+                
+                document.getElementById('userName').textContent = username;
+                showPage('dashboardPage', 'ЕГЭ Русский язык');
+            }
+        });
+
+        // Menu handlers
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            document.getElementById('sideMenu').classList.remove('hidden');
+            setTimeout(() => {
+                document.querySelector('.slide-up').classList.add('show');
+            }, 10);
+        });
+
+        document.getElementById('closeSideMenu').addEventListener('click', () => {
+            document.querySelector('.slide-up').classList.remove('show');
+            setTimeout(() => {
+                document.getElementById('sideMenu').classList.add('hidden');
+            }, 300);
+        });
+
+        document.getElementById('sideMenu').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('sideMenu')) {
+                document.querySelector('.slide-up').classList.remove('show');
+                setTimeout(() => {
+                    document.getElementById('sideMenu').classList.add('hidden');
+                }, 300);
+            }
+        });
+
+        // Menu links
+        document.querySelectorAll('.menu-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = link.getAttribute('data-page');
+                const title = link.querySelector('span').textContent;
+                showPage(page + 'Page', title);
+                
+                // Close menu
+                document.querySelector('.slide-up').classList.remove('show');
+                setTimeout(() => {
+                    document.getElementById('sideMenu').classList.add('hidden');
+                }, 300);
+            });
+        });
+
+        // Bottom navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const page = btn.getAttribute('data-page');
+                const title = btn.getAttribute('data-title');
+                showPage(page, title);
+            });
+        });
+
+        // Task constructor
+        document.getElementById('addOption').addEventListener('click', () => {
+            const optionsContainer = document.getElementById('answerOptions');
+            const newOption = document.createElement('input');
+            newOption.type = 'text';
+            newOption.className = 'answer-option w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500';
+            newOption.placeholder = `Вариант ${optionsContainer.children.length + 1}`;
+            optionsContainer.appendChild(newOption);
+        });
+
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const options = Array.from(document.querySelectorAll('.answer-option'))
+                .map(input => input.value)
+                .filter(value => value.trim() !== '');
+            
+            const task = {
+                category: document.getElementById('taskCategory').value,
+                number: document.getElementById('taskNumber').value,
+                text: document.getElementById('taskText').value,
+                options: options,
+                correctAnswer: parseInt(document.getElementById('correctAnswer').value),
+                explanation: document.getElementById('taskExplanation').value,
+                createdBy: currentUser.id,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Save task to IndexedDB
+            const transaction = db.transaction(['tasks'], 'readwrite');
+            const store = transaction.objectStore('tasks');
+            await store.add(task);
+            
+            alert('Задание создано успешно!');
+            document.getElementById('taskForm').reset();
+        });
+
+        // Load tasks
+        const loadTasks = async (category) => {
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = '';
+            
+            // Sample tasks for demonstration
+            const sampleTasks = [
+                {
+                    id: 1,
+                    text: 'В каком слове пропущена безударная проверяемая гласная корня?',
+                    options: ['разв..вать флаги', 'прор..дить посевы', 'разв..ваться на ветру', 'ор..шать водой'],
+                    number: 9
+                },
+                {
+                    id: 2,
+                    text: 'В каком ряду во всех словах пропущена одна и та же буква?',
+                    options: ['пр..увеличить, пр..школьный', 'под..брать, об..гнать', 'бе..полезный, ра..писание', 'пред..стория, супер..гра'],
+                    number: 10
+                }
+            ];
+            
+            sampleTasks.forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = 'bg-white rounded-xl p-4 soft-shadow hover-scale smooth-transition cursor-pointer';
+                taskElement.innerHTML = `
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">Задание ${task.number}</span>
+                            <span class="text-xs text-gray-500">${category}</span>
+                        </div>
+                        <p class="text-gray-800 font-medium">${task.text}</p>
+                    </div>
+                    <div class="space-y-2">
+                        ${task.options.map((option, index) => `
+                            <button class="w-full text-left p-2 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 smooth-transition">
+                                ${index + 1}. ${option}
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+                tasksList.appendChild(taskElement);
+            });
+        };
+
+        // Load tutors for booking
+        const loadTutors = async () => {
+            const tutorSelect = document.getElementById('tutorSelect');
+            tutorSelect.innerHTML = '<option value="">Выберите репетитора...</option>';
+            
+            // Sample tutors
+            const tutors = [
+                { id: 1, name: 'Анна Петровна', rating: 4.9 },
+                { id: 2, name: 'Сергей Иванович', rating: 4.8 },
+                { id: 3, name: 'Мария Алексеевна', rating: 4.7 }
+            ];
+            
+            tutors.forEach(tutor => {
+                const option = document.createElement('option');
+                option.value = tutor.id;
+                option.textContent = `${tutor.name} (⭐ ${tutor.rating})`;
+                tutorSelect.appendChild(option);
+            });
+            
+            tutorSelect.addEventListener('change', loadAvailableSlots);
+        };
+
+        // Load available slots
+        const loadAvailableSlots = () => {
+            const slotsContainer = document.getElementById('availableSlots');
+            slotsContainer.innerHTML = '';
+            
+            // Sample available slots
+            const slots = [
+                { id: 1, date: '2024-01-15', time: '10:00', available: true },
+                { id: 2, date: '2024-01-15', time: '14:00', available: false },
+                { id: 3, date: '2024-01-16', time: '16:00', available: true },
+                { id: 4, date: '2024-01-17', time: '11:00', available: true }
+            ];
+            
+            slots.forEach(slot => {
+                const slotElement = document.createElement('div');
+                slotElement.className = `schedule-slot ${slot.available ? '' : 'booked'}`;
+                slotElement.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold">${new Date(slot.date).toLocaleDateString('ru-RU')}</p>
+                            <p class="text-gray-600">${slot.time}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="${slot.available ? 'text-green-500' : 'text-red-500'}">
+                                ${slot.available ? 'Свободно' : 'Занято'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                
+                if (slot.available) {
+                    slotElement.addEventListener('click', () => {
+                        document.querySelectorAll('.schedule-slot').forEach(s => s.classList.remove('selected'));
+                        slotElement.classList.add('selected');
+                        
+                        const bookBtn = document.getElementById('bookSlot');
+                        bookBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        bookBtn.removeAttribute('disabled');
+                        
+                        bookBtn.onclick = () => {
+                            alert('Вы успешно записались на занятие!');
+                            loadAvailableSlots(); // Refresh slots
+                        };
+                    });
+                }
+                
+                slotsContainer.appendChild(slotElement);
+            });
+        };
+
+        // Load time slots for tutors
+        const loadTimeSlots = () => {
+            const timeSlotsContainer = document.getElementById('timeSlots');
+            timeSlotsContainer.innerHTML = '';
+            
+            // Sample time slots
+            const timeSlots = [
+                { id: 1, date: '2024-01-15', time: '10:00', booked: false },
+                { id: 2, date: '2024-01-15', time: '14:00', booked: true, studentName: 'Петр С.' },
+                { id: 3, date: '2024-01-16', time: '16:00', booked: false }
+            ];
+            
+            timeSlots.forEach(slot => {
+                const slotElement = document.createElement('div');
+                slotElement.className = 'bg-white rounded-xl p-4 soft-shadow';
+                slotElement.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-semibold">${new Date(slot.date).toLocaleDateString('ru-RU')}</p>
+                            <p class="text-gray-600">${slot.time}</p>
+                            ${slot.booked ? `<p class="text-sm text-blue-600">Ученик: ${slot.studentName}</p>` : ''}
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 rounded-full text-xs ${slot.booked ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}">
+                                ${slot.booked ? 'Занято' : 'Свободно'}
+                            </span>
+                            <button class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                timeSlotsContainer.appendChild(slotElement);
+            });
+        };
+
+        // Add time slot button
+        document.getElementById('addTimeSlot')?.addEventListener('click', () => {
+            const date = prompt('Введите дату (ГГГГ-ММ-ДД):');
+            const time = prompt('Введите время (ЧЧ:ММ):');
+            
+            if (date && time) {
+                // Add to database and refresh
+                alert('Время добавлено в расписание!');
+                loadTimeSlots();
+            }
+        });
+
+        // Progress chart
+        const loadProgressChart = () => {
+            const ctx = document.getElementById('progressChart');
+            if (!ctx) return;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Орфография', 'Пунктуация', 'Языковые нормы', 'Работа с текстом'],
+                    datasets: [{
+                        data: [75, 60, 45, 30],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(147, 51, 234, 0.8)'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        // Floating action button
+        document.getElementById('floatingBtn').addEventListener('click', () => {
+            if (currentRole === 'tutor') {
+                showPage('taskConstructorPage', 'Создать задание');
+            } else {
+                showPage('tasksPage', 'Быстрые задания');
+            }
+        });
+
+        // Initialize app
+        const init = async () => {
+            await initDB();
+            
+            // Check if user exists
+            if (tg?.initDataUnsafe?.user?.id) {
+                const user = await getUser(tg.initDataUnsafe.user.id);
+                if (user) {
+                    currentUser = user;
+                    currentRole = user.role;
+                    
+                    // Update UI based on role
+                    if (currentRole === 'tutor') {
+                        document.getElementById('tutorMenu').classList.remove('hidden');
+                    } else {
+                        document.getElementById('studentMenu').classList.remove('hidden');
+                    }
+                    
+                    document.getElementById('userName').textContent = user.username;
+                    showPage('dashboardPage', 'ЕГЭ Русский язык');
+                    return;
+                }
+            }
+            
+            // Show registration if no user found
+            showPage('registrationPage', 'Регистрация');
+        };
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+    <script id="html_badge_script1">
+        window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
+            "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDozce30c%2B5F%2BIoit6630LnKlhkvK56zoes%2BvtUWrQ1wG%2FtH02eDBTT2E%2B0L1BCCtVtMoT8o2SdlFDJNTnlt3wABZVpl4lcmcuXHqOe7Rwg%2Bw%2BsNG%2FGcaqAEYLPsjSg9FWN9T%2FlYMHTnMwPXuPN1TnfWHygNhUAxImqwCNRrE5B3py7q1X0p3b0eXb0N%2BIKLQIO%2BguNTsvy4gaYcszdGUoLoBZISRa%2BgOoeZokiZ6xGNmPJX3ukePHmZApxHQke6ONjnhLx481MjJ0%2F7IwyNo6fInJhNeTxJlahXLnVcQLb9JINL0pgkFVmAGuf0iB8C4fSCXLyGrRpv4X%2FYAX07u4lw4qbAMrepQpMTOVDPBdXcocB2trsTKWDshgy59TIkVu0km0f92KDNxqbctfQ19N9ZKPdfaJq0GQxA78QfAMA%2BXPwecC9SUmWk6IcDJUXrGJKVDkEGFK%2FNG74tiMr0efarEbHlH98DUDN27uZgkM1HULgItGjzPiKrSvwN6wbNy4ZMirxeYOjD2dsVV5vjTojw%3D";
+        window.__genspark_locale = "en-US";
+        window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDozce30c+5F+Ioit6630LnKlhkvK56zoes+vtUWrQ1wG/tH02eDBTT2E+0L1BCCtVtMoT8o2SdlFDJNTnlt3wABZVpl4lcmcuXHqOe7Rwg+w+sNG/GcaqAEYLPsjSg9FWN9T/lYMHTnMwPXuPN1TnfWHygNhUAxImqwCNRrE5B3py7q1X0p3b0eXb0N+IKLQIO+guNTsvy4gaYcszdGUoLoBZISRa+gOoeZokiZ6xGNmPJX3ukePHmZApxHQke6ONjnhLx481MjJ0/7IwyNo6fInJhNeTxJlahXLnVcQLb9JINL0pgkFVmAGuf0iB8C4fSCXLyGrRpv4X/YAX07u4lw4qbAMrepQpMTOVDPBdXcocB2trsTKWDshgy59TIkVu0km0f92KDNxqbctfQ19N9ZKPdfaJq0GQxA78QfAMA+XPwecC9SUmWk6IcDJUXrGJKVDkEGFK/NG74tiMr0efarEbHlH98DUDN27uZgkM1HULgItGjzPiKrSvwN6wbNy4ZMirxeYOjD2dsVV5vjTojw=";
+    </script>
+    
+        <script id="html_badge_script2" src="asset/html_badge.js"></script>
+        
+    <script id="html_notice_dialog_script" src="asset/notice_dialog.js"></script>
+    
